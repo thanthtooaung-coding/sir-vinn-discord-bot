@@ -1,5 +1,6 @@
 package org.sirvinn;
 
+import com.sun.net.httpserver.HttpServer;
 import io.github.cdimascio.dotenv.Dotenv;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
@@ -18,6 +19,8 @@ import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.managers.AudioManager;
 
 import java.awt.Color;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -64,6 +67,31 @@ public class Bot extends ListenerAdapter {
                 .build();
 
         Runtime.getRuntime().addShutdownHook(new Thread(jda::shutdown));
+
+        startHealthCheckServer();
+    }
+
+    private static void startHealthCheckServer() {
+        try {
+            String portStr = getConfig("PORT");
+            int port = (portStr != null) ? Integer.parseInt(portStr) : 10000;
+
+            HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
+
+            server.createContext("/", exchange -> {
+                String response = "Bot is running!";
+                exchange.sendResponseHeaders(200, response.getBytes().length);
+                try (OutputStream os = exchange.getResponseBody()) {
+                    os.write(response.getBytes());
+                }
+            });
+            server.setExecutor(null);
+            server.start();
+            LOGGER.info("Health check server started on port " + port);
+
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Could not start health check server", e);
+        }
     }
 
     @Override
