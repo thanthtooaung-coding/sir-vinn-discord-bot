@@ -44,10 +44,14 @@ public class Bot extends ListenerAdapter {
     private final ConcurrentHashMap<String, List<String>> userVotes = new ConcurrentHashMap<>();
     private final HttpClient client = HttpClient.newHttpClient();
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-    private static final Dotenv dotenv = Dotenv.load();
+    private static final Dotenv dotenv = Dotenv.configure().ignoreIfMissing().systemProperties().load();
+
+    private static String getConfig(final String key) {
+        return dotenv.get(key);
+    }
 
     public static void main(String[] args) {
-        final String token = dotenv.get("DISCORD_BOT_TOKEN");
+        final String token = getConfig("DISCORD_BOT_TOKEN");
 
         if (token == null || token.isEmpty()) {
             LOGGER.severe("Error: DISCORD_BOT_TOKEN environment variable not set.");
@@ -217,7 +221,7 @@ public class Bot extends ListenerAdapter {
         String question = Objects.requireNonNull(event.getOption("question")).getAsString();
         event.deferReply().queue();
 
-        final String geminiApiKey = dotenv.get("GEMINI_API_KEY");
+        final String geminiApiKey = getConfig("GEMINI_API_KEY");
 
         if (geminiApiKey == null || geminiApiKey.equals("YOUR_GEMINI_API_KEY_HERE")) {
             event.getHook().sendMessage("The `/ask` command is not configured. The bot owner needs to provide a Gemini API key.").queue();
